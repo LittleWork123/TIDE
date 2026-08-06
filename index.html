@@ -1,0 +1,1079 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TIDE: Task-Isolated Diffusion for Unified Video Editing and Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06070c;--bg2:#0b0d16;--panel:#10131e;--line:rgba(146,160,214,.13);
+--txt:#eaeef9;--mut:#8d95b0;--c1:#4fd8ff;--c2:#8f7bff;--c3:#ff6aa9;
+--sans:"Space Grotesk","PingFang SC",system-ui,sans-serif;
+--serif:"Newsreader",Georgia,serif;--mono:"JetBrains Mono",ui-monospace,monospace;--max:1360px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.7 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}img{max-width:100%}
+::selection{background:var(--c2);color:#fff}
+.wrap{width:min(calc(100% - 48px),var(--max));margin-inline:auto}
+
+#nav{position:fixed;z-index:50;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:2px;
+align-items:center;padding:6px 8px;border-radius:99px;border:1px solid var(--line);
+background:rgba(9,11,18,.74);backdrop-filter:blur(16px)}
+#nav .logo{font-weight:700;font-size:13px;letter-spacing:.12em;padding:4px 12px;
+background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
+#nav a.t{font-family:var(--mono);font-size:10.5px;color:var(--mut);padding:6px 11px;border-radius:99px;white-space:nowrap}
+#nav a.t:hover,#nav a.t.on{color:var(--txt);background:rgba(143,123,255,.15)}
+@media(max-width:980px){#nav a.t{display:none}}
+
+/* hero */
+#hero{position:relative;min-height:100svh;display:grid;place-items:center;overflow:hidden}
+#hero .bgv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.6s ease}
+#hero .bgv.show{opacity:.55}
+#hero .scrim{position:absolute;inset:0;background:
+radial-gradient(130% 95% at 50% 8%,transparent 25%,var(--bg) 94%),
+linear-gradient(180deg,rgba(6,7,12,.62),rgba(6,7,12,.18) 42%,var(--bg) 96%)}
+#hero .in{position:relative;z-index:2;text-align:center;padding:120px 20px 70px;max-width:1060px}
+.badge{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:10px;
+letter-spacing:.24em;text-transform:uppercase;color:#c3cade;border:1px solid var(--line);
+border-radius:99px;padding:7px 15px;background:rgba(10,12,20,.45);backdrop-filter:blur(8px)}
+.badge i{width:6px;height:6px;border-radius:50%;background:var(--c1);box-shadow:0 0 12px var(--c1)}
+#hero h1{margin:28px 0 0;font-size:clamp(44px,6.4vw,92px);line-height:1.0;letter-spacing:-.045em;font-weight:700;text-shadow:0 4px 40px rgba(0,0,0,.45)}
+#hero h1 .grad{background:linear-gradient(93deg,var(--c1) 0%,var(--c2) 50%,var(--c3) 100%);
+-webkit-background-clip:text;background-clip:text;color:transparent}
+#hero h1 em{font-family:var(--serif);font-style:italic;font-weight:400}
+#hero .sub{margin:20px auto 0;max-width:720px;font-family:var(--serif);font-style:italic;
+font-size:clamp(16px,2vw,22px);color:#ccd3e8;text-shadow:0 2px 22px rgba(0,0,0,.8)}
+.authors{margin:30px 0 4px;font-size:15.5px;font-weight:600;line-height:1.85;text-shadow:0 2px 16px rgba(0,0,0,.9)}
+.authors sup{font-size:.66em;color:var(--c1)}
+.affil{margin:0 0 30px;color:#aab2cc;font-size:12.5px;text-shadow:0 2px 12px rgba(0,0,0,.9)}
+.affil sup{font-size:.7em}
+.links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;gap:9px;align-items:center;min-height:44px;padding:0 20px;border-radius:10px;
+font-size:12.5px;font-weight:700;letter-spacing:.02em;border:1px solid rgba(255,255,255,.22);
+background:rgba(12,14,22,.5);backdrop-filter:blur(8px);transition:transform .2s,background .2s}
+.btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.1)}
+.btn.pri{border:none;background:linear-gradient(93deg,var(--c1),var(--c2));color:#0a0c14}
+.btn.pri:hover{filter:brightness(1.1)}
+.hero-dots{display:flex;gap:7px;justify-content:center;margin-top:46px}
+.hero-dots i{width:22px;height:3px;border-radius:2px;background:rgba(255,255,255,.22);transition:.3s;cursor:pointer}
+.hero-dots i.on{background:var(--c1)}
+.scrolldn{margin-top:18px;font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--mut);text-transform:uppercase}
+
+/* generic sections */
+section.blk{padding:96px 0 20px}
+.head{text-align:center;max-width:820px;margin:0 auto 40px}
+.kick{font-family:var(--mono);font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;
+color:var(--c1);margin-bottom:14px}
+.head h2{margin:0;font-size:clamp(26px,3.4vw,42px);letter-spacing:-.03em;line-height:1.12}
+.head h2 em{font-family:var(--serif);font-style:italic;font-weight:400;
+background:linear-gradient(90deg,var(--c2),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.head p{color:var(--mut);font-size:14.5px;margin:16px auto 0;max-width:640px}
+
+/* abstract & method */
+.abstract{max-width:880px;margin:0 auto;font-family:var(--serif);font-size:17.5px;line-height:1.95;
+color:#c9d0e6;text-align:justify}
+.abstract::first-letter{font-size:3.2em;float:left;line-height:.82;padding:6px 10px 0 0;
+font-family:var(--serif);color:var(--c1)}
+.methodfig{margin:44px auto 0;max-width:1080px;border:1px solid var(--line);border-radius:18px;
+overflow:hidden;background:#fff;box-shadow:0 30px 90px rgba(79,216,255,.06)}
+.methodfig img{display:block;width:100%}
+.figcap{max-width:820px;margin:16px auto 0;text-align:center;color:var(--mut);font-size:13px}
+
+/* case grid: 每行 4 个 */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media(max-width:1250px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);border-radius:16px;overflow:hidden;
+background:linear-gradient(180deg,var(--panel),var(--bg2));
+transition:transform .25s,border-color .25s,box-shadow .25s}
+.card:hover{transform:translateY(-3px);border-color:rgba(79,216,255,.42);box-shadow:0 16px 55px rgba(79,216,255,.08)}
+.frame{position:relative;background:#000;aspect-ratio:1280/704;overflow:hidden}
+.card.portrait .frame{aspect-ratio:704/1280}
+.frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+/* compare slider */
+.frame .srcwrap{position:absolute;inset:0;width:50%;overflow:hidden;z-index:2}
+.frame .srcwrap video{width:auto;height:100%}
+.frame .cut{position:absolute;top:0;bottom:0;left:50%;width:2px;background:rgba(255,255,255,.95);
+z-index:4;pointer-events:none;box-shadow:0 0 10px rgba(0,0,0,.6)}
+.frame .knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;
+border-radius:50%;background:#fff;color:#111;z-index:5;display:grid;place-items:center;
+font-size:11px;pointer-events:none;box-shadow:0 2px 12px rgba(0,0,0,.5)}
+.frame .tagL,.frame .tagR{position:absolute;top:8px;z-index:6;font-family:var(--mono);font-size:8.5px;
+letter-spacing:.14em;text-transform:uppercase;padding:3px 9px;border-radius:5px;
+background:rgba(4,5,9,.72);color:#dfe5f5;pointer-events:none}
+.frame .tagL{left:8px}.frame .tagR{right:8px;color:#0a0c14;background:linear-gradient(90deg,var(--c1),var(--c2));font-weight:700}
+.refrow{display:flex;gap:5px;padding:8px 10px 0;flex-wrap:wrap}
+.refrow .r{position:relative;height:44px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.refrow img{height:100%;width:auto;display:block}
+.refrow .lab{position:absolute;left:0;right:0;bottom:0;font-family:var(--mono);font-size:7.5px;
+text-align:center;letter-spacing:.06em;background:rgba(4,5,9,.74);color:var(--mut)}
+.cap{padding:9px 13px 13px;font-size:12px;color:#a6aec9;line-height:1.55;cursor:pointer;
+display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cap.open{-webkit-line-clamp:unset}
+
+/* bibtex */
+.bib{max-width:780px;margin:0 auto;position:relative}
+.bib pre{margin:0;background:#0c0f1a;border:1px solid var(--line);border-radius:16px;
+padding:26px 30px;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:#c6cde4;
+overflow-x:auto;white-space:pre}
+.bib button{position:absolute;top:12px;right:12px;font-family:var(--mono);font-size:11px;
+padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:rgba(143,123,255,.12);
+color:var(--txt);cursor:pointer}
+.bib button:hover{background:rgba(143,123,255,.25)}
+
+.divider{height:1px;margin:76px auto 0;width:min(calc(100% - 48px),var(--max));
+background:linear-gradient(90deg,transparent,rgba(143,123,255,.34),transparent)}
+footer{padding:64px 0 56px;text-align:center;color:var(--mut);font-family:var(--mono);font-size:11px}
+footer a{color:var(--c1)}
+
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+
+.bench{display:inline-block;margin:9px 10px 0;padding:4px 8px;border:1px solid rgba(79,216,255,.24);
+border-radius:999px;background:rgba(79,216,255,.07);color:var(--c1);font-family:var(--mono);
+font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+</style></head><body>
+
+<nav id="nav"><a class="logo" href="#hero">TIDE</a>
+<a class="t" href="#abstract">Abstract</a><a class="t" href="#method">Method</a><a class="t" href="#tide">Multi-Ref</a><a class="t" href="#opens2v">S2V</a><a class="t" href="#openve">Editing</a><a class="t" href="#refvie">Ref-Edit</a><a class="t" href="#mi2v">MI2V</a>
+<a class="t" href="#bibtex">BibTeX</a></nav>
+
+<header id="hero">
+<video id="bgA" class="bgv" muted loop playsinline></video>
+<video id="bgB" class="bgv" muted loop playsinline></video>
+<div class="scrim"></div>
+<div class="in">
+  <span class="badge"><i></i>unified video editing &amp; generation</span>
+  <h1><span class="grad">TIDE</span><br><em>Task-Isolated Diffusion</em></h1>
+  <p class="sub">One diffusion model for instruction editing, reference-guided editing,
+  and subject-driven generation.</p>
+  
+<p class="authors">
+Qi Liu<sup>1,*</sup>, Gang Yue<sup>2,*</sup>, Mingyu Yin<sup>2</sup>, Lisai Zhang<sup>2</sup>,
+Yidi Wu<sup>2</sup>, Yaole Wang<sup>2</sup>, Yaohui Wang<sup>2</sup>, Chang Yao<sup>1</sup>,
+Jingyuan Chen<sup>1,†</sup>, Lin Ma<sup>†</sup>
+</p>
+<p class="affil"><sup>1</sup>Zhejiang University&emsp;<sup>2</sup>Bilibili Inc.<br>
+<sup>*</sup>Equal contribution&emsp;<sup>†</sup>Corresponding author</p>
+
+  <div class="links">
+    <a class="btn pri" href="https://arxiv.org/pdf/2606.08260">📄 Paper</a>
+    <a class="btn" href="https://github.com/LittleWork123/TIDE">〈/〉 Code</a>
+    <a class="btn" href="#bibtex">❞ BibTeX</a>
+  </div>
+  <div class="hero-dots" id="dots"></div>
+  <div class="scrolldn">scroll ↓ · space to pause</div>
+</div>
+</header>
+
+<section class="blk" id="abstract"><div class="wrap">
+<div class="head rv"><div class="kick">TL;DR</div>
+<h2>Every task, <em>one model.</em></h2></div>
+<p class="abstract rv">Recent advances in Diffusion Transformers have driven rapid progress in video generation and editing, yet these capabilities are still handled by separate, task-specific models. Building a unified framework that supports diverse video tasks remains an open challenge: existing unified attempts either require dedicated auxiliary encoders or lack explicit mechanisms to distinguish heterogeneous conditioning tokens, struggling when the number and type of visual conditions vary across tasks. We propose TIDE, a unified framework that integrates instruction-based editing, reference-guided editing, and multi-reference generation. At its core, we introduce per-token task embeddings that assign each input token a task-specific identifier, enabling the model to explicitly disambiguate target, source, and reference tokens. To simultaneously capture high-level semantic understanding and fine-grained structural fidelity, we design a dual-path conditioning scheme that couples a vision-language model with a VAE latent path for complementary signals. We further devise a multi-task progressive training strategy that incrementally introduces tasks of increasing complexity, effectively harmonizing diverse objectives and enabling smooth generalization across heterogeneous task distributions. Extensive experiments on multiple video editing and generation benchmarks demonstrate that TIDE achieves state-of-the-art performance across all evaluated tasks.</p>
+</div></section><div class="divider"></div>
+
+<section class="blk" id="method"><div class="wrap">
+<div class="head rv"><div class="kick">Method</div>
+<h2>Per-token task embeddings,<br><em>dual-path conditioning.</em></h2>
+<p>Each conditioning token carries a task identifier that tells the model what to preserve,
+what to draw identity from, and what to denoise; a VLM path reads intent while a VAE path
+keeps structure.</p></div>
+<figure class="methodfig rv"><img loading="lazy" src="assets/method_overview.png" alt="TIDE architecture"></figure>
+</div></section><div class="divider"></div>
+
+<section class="blk" id="tide"><div class="wrap">
+<div class="head rv"><div class="kick">01 · 35 cases</div>
+<h2>Complex Multi-Reference <em>Editing</em></h2><p>Selected showcases and benchmark cases with several simultaneous operations in one pass — each background replacement, add, swap, or removal driven by its own reference.</p></div>
+<div class="grid"><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_003/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_003/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Selected Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_003/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the entire city street background of Video-1 with the snowy field at night under bright green aurora borealis from Image-1, with distant mountains and pine trees under a starry sky. Remove the white tote bag from the woman&#x27;s left shoulder on the left side of the frame. Ensure all three people remain in the foreground with their walking motion preserved, seamlessly integrated into the new arctic night environment.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_009/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_009/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Selected Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_009/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_009/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the modern city street background of Video-1 with the dusty Wild West town street lined with wooden saloon and hotel buildings from Image-1. Replace the dark gray button-up shirt worn by the middle man with the red and black buffalo plaid flannel shirt from Image-2, preserving his white undershirt, jeans, backpack, and walking posture.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_018/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_018/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Selected Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_018/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_018/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the indoor living room background of Video-1 with the vast Uyuni salt flats under a bright sky from Image-1. Add the red Santa Claus hat with white fluffy trim from Image-2 onto the head of the woman sitting in the middle, fitting naturally with her long black hair and seated posture. All clothing remains unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_034/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_034/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Selected Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_034/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_034/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the beach and lighthouse background of Video-1 with the vast Uyuni salt flats reflecting sky and clouds from Image-1. Replace the right woman&#x27;s white top and dark floral skirt with the bright yellow sleeveless sundress from Image-2, keeping her red curly hair and relaxed pose on the blanket.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_042/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_042/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Selected Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_042/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_042/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the winter city street background of Video-1 with the vast Uyuni salt flats reflecting the sky from Image-1. Replace the middle man&#x27;s gray houndstooth blazer with the burgundy velvet blazer from Image-2, keeping his navy turtleneck and black beret.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_000/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_000/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_000/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the sandy beach background of Video-1 with the vibrant, neon-lit nighttime cityscape of Times Square from Image-1. Ensure the two surfers in their wetsuits remain in the foreground, seamlessly integrated into the new urban environment as if walking through the street.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_003/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_003/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_003/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the entire indoor living room background of Video-1 with the charming European cobblestone alley scene depicted in Image-1. Ensure the woman from Video-1 remains in the foreground, maintaining her seated position on the ground while her surroundings are seamlessly transitioned into the narrow, historic stone street lined with timber-framed buildings and blooming flowers.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_006/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_006/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_006/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the existing dark, plain background of Video-1 with the vibrant deep-sea underwater scene depicted in Image-1. Ensure the new background includes the bioluminescent jellyfish, colorful corals, and underwater hydrothermal vents to create an immersive aquatic atmosphere behind the two performers.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_007/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_007/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_007/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the plain white wall background of Video-1 with the vibrant cherry blossom pathway from Image-1. Ensure the new background is seamlessly integrated behind the chair and the side table, maintaining the original lighting and perspective of the scene.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_010/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_010/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_010/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the entire nighttime city street background of Video-1 with the interior of the ancient Egyptian temple shown in Image-1. Ensure the temple&#x27;s stone columns and detailed wall carvings seamlessly integrate behind the people currently standing in the foreground, maintaining the perspective of the temple&#x27;s hall.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_017/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_017/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_017/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Add the beige, rectangular, textured floor rug from Image-1 underneath the black wooden chair in Video-1. The rug should be positioned flat on the dark wood floor, centered beneath the chair&#x27;s legs, covering the area directly under the seating space.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_028/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_028/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_028/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the black and white patterned hat worn by the man in Video-1 with the solid brown fedora shown in Image-1. The new brown fedora should maintain the same position on the man&#x27;s head, covering his hair, and match the size and brim style of the original hat.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_033/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_033/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div>
+<p class="cap" title="click to expand">Remove the blue-tinted, three-columned potted cactus located at the center front of the white desk in Video-1. Ensure the surface of the white desk is seamlessly filled in where the brown terracotta pot previously sat.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_034/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_034/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div>
+<p class="cap" title="click to expand">Remove the small green potted plant sitting on the white kitchen counter in the background of Video-1, as specified in. Ensure the area where the plant was located is seamlessly filled with the same white countertop and cabinet finish visible behind it.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_047/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_047/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_047/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_047/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the existing forest trail background in Video-1 with the vibrant lavender field scene from Image-1. Add the bright orange backpack rain cover from Image-2 over the blue backpack worn by the person in the center of the frame, ensuring it snugly covers the rear portion of the backpack.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_052/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_052/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_052/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_052/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the existing architectural stairwell background in Video-1 with the detailed steampunk workshop interior shown in Image-1. Add the minimalist black floor lamp from Image-2 to the left side of the frame, positioning it on the floor next to the man playing the guitar so that it stands vertically against the workshop wall.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_remove_065/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_remove_065/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_remove_065/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the current solid dark blue background in Video-1 with the vibrant sunset beach scene from Image-1, featuring palm trees and a calm ocean. Remove the silver hoop earring with the white teardrop pearl pendant currently worn on the subject&#x27;s ear, ensuring the earlobe appears natural and free of jewelry.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_remove_072/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_remove_072/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_remove_072/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the existing gymnasium background of Video-1 with the futuristic cityscape from Image-1, maintaining the foreground trampoline and the person jumping. Remove the brown leather pommel horse located in the center background of the gymnasium.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_091/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_091/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_091/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_091/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the entire background of Video-1, including the white walls and windows, with the expansive purple lavender field scene from Image-1. Additionally, replace the large rectangular mirror located on the left wall with the sleek, black, flat-screen television from Image-2, ensuring the TV is mounted in the same position and orientation as the original mirror.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_099/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_099/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_099/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_099/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the entire living room background of Video-1 with the traditional Japanese tatami room scene from Image-1, maintaining the subject&#x27;s position in the foreground. Replace the large abstract painting hanging on the wall behind the sofa with the framed green fern botanical print shown in Image-2, ensuring it is centered on the wall.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_101/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_101/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_101/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_replace_101/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the existing outdoor forest background in Video-1 with the lush rainforest waterfall scene from Image-1. Replace the wooden signpost located on the right side of the hiking trail in Video-1 with the modern stainless steel trail map kiosk shown in Image-2, ensuring it is positioned firmly in the ground where the original sign stood.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_116/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_116/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_116/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_116/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Add the lush green potted fiddle-leaf fig plant from Image-1 to the empty left corner of the room in Video-1. Place the beige, round, fabric-covered meditation cushion from Image-2 directly underneath the woman in the video, so she is sitting centered on top of it.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_117/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_117/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_117/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_117/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Add the potted green basil plant from Image-1 to the far right corner of the wooden kitchen counter in Video-1. Place the rectangular wooden cutting board from Image-2 flat on the center of the kitchen counter, directly in front of the man.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_remove_124/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_remove_124/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_remove_124/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Add the black cylindrical speaker from Image-1 to the far back corner of the room, positioned on the floor near the right side of the wall. Remove the large arched window located on the back wall in the center of Video-1, replacing that area with a plain white wall surface that matches the surrounding room texture.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_replace_154/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_replace_154/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_replace_154/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/replace_replace_154/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the man&#x27;s gray and white horizontally striped sweater in Video-1 with the beige linen shirt shown in Image-1, maintaining the same fit and seated posture. Simultaneously, replace the boy&#x27;s solid blue long-sleeved shirt in Video-1 with the bright yellow hoodie from Image-2, ensuring the hood and sleeves match the boy&#x27;s current position on the wooden dock.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_remove_164/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_remove_164/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div>
+<p class="cap" title="click to expand">Remove the weathered brown wooden signpost located on the right side of the hiking trail in Video-1. Additionally, remove the blue water bottle tucked into the side pocket of the blue backpack worn by the hiker in the center of Video-1.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_remove_165/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_remove_165/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div>
+<p class="cap" title="click to expand">Remove the clear glass beaker positioned at the front left of the desk in Video-1. Additionally, remove the transparent acrylic test tube rack containing colorful liquids located on the left side of the desk, corresponding to.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_remove_168/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_remove_168/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div>
+<p class="cap" title="click to expand">Remove the pile of broken concrete debris located at the bottom left foreground of Video-1. Additionally, remove the yellow taxi car positioned in the background on the right side of the street.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_replace_178/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_replace_178/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_replace_178/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Remove all the vertical brown wooden posts lining both sides of the boardwalk in Video-1. Replace the entire wooden plank boardwalk surface with the grey, irregular stone tile texture shown in Image-1, ensuring the new path maintains the same winding shape and perspective as the original walkway.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_replace_184/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_replace_184/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/remove_replace_184/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Remove the cyclist positioned on the left side of the road in Video-1. Replace the black windbreaker worn by the central cyclist with the bright neon yellow short-sleeved cycling jersey shown in Image-1, ensuring the new jersey maintains the same fit and follows the rider&#x27;s posture.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_remove_190/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_remove_190/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_remove_190/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/bg_add_remove_190/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Replace the plain white wall background of Video-1 with the atmospheric Chinese town canal scene filled with glowing red lanterns from Image-1. Remove the potted snake plant located in the wicker basket on the right side of the frame. Add the sleek black floor lamp from Image-2 into the right corner of the room, positioning it upright on the floor where the plant was previously located.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_remove_198/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_remove_198/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_remove_198/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/add_add_remove_198/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Remove the dark brown wooden side table located on the left side of Video-1. Add the potted fiddle-leaf fig plant from Image-1 to the floor space where the side table was previously positioned, next to the chair. Hang the minimalist framed abstract wall art from Image-2 on the empty white wall behind the woman, centering it horizontally above her head.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_202/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_202/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_202/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Apply the pointillism painting style of Image-1 to Video-1, using tiny distinct dots of color, optical color mixing, a vibrant mosaic-like texture, and systematic dot patterns. It is crucial to maintain the original motion of the basketball player, the outdoor court, and the entire spatial composition.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_209/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_209/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_209/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Style Video-1 as a soft watercolor painting based on Image-1, showcasing translucent washes, bleeding edges, soft gradients, visible brush strokes, and delicate color blending. All original motion of the man fishing by the lake, along with the subjects and spatial composition, must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_210/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_210/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Reference Editing</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tide/global_style_210/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Apply the low-poly 3D geometric art style of Image-1 to Video-1, characterized by flat-shaded triangular facets, geometric simplification, angular surfaces, and minimal color gradients within each polygon. It is essential to preserve the original motion of the street performer, the musical instruments, and the entire spatial composition.</p></div></div>
+</div></section><div class="divider"></div>
+<section class="blk" id="opens2v"><div class="wrap">
+<div class="head rv"><div class="kick">02 · 28 cases</div>
+<h2>Subject-Driven Video <em>Generation</em></h2><p>Given one or multiple reference images, generate a coherent video while preserving every subject&#x27;s identity, appearance, and interactions.</p></div>
+<div class="grid"><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_2/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_2/reference_0.jpg"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up of a vintage camera resting on an old wooden desk, surrounded by scattered photographs. The camera zooms in to capture the details of the camera—its weathered leather, brass accents, and the glass lens catching the light. A hand gently picks up one of the photographs, flipping it over to reveal its back. The camera shifts focus between the photos and the camera, as the hand adjusts the camera’s settings with a soft click. As the hand places the photo back onto the desk, a slight breeze causes a few of the scattered photographs to shift, creating subtle motion in the scene. The soft sound of the camera’s dials and the faint rustle of paper add to the nostalgic atmosphere of the moment.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_5/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_5/reference_0.jpg"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up of a street lamp, its warm glow casting soft light across the cobblestone street below. The camera slowly zooms out, revealing the lantern-style lamp against a dusky sky, with scattered clouds catching the last light of sunset. As the breeze stirs, the faint rustle of leaves can be heard, and the soft light from the lamp flickers slightly, casting changing shadows on the cobblestones. The camera moves gently around the scene, capturing the play of light and shadow, with the street lamp remaining the focal point. The distant sound of footsteps or faint city noise adds to the calm yet slightly mysterious atmosphere of the quiet evening.
+
+background</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_7/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_7/reference_0.jpg"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The video opens with a close-up of a teddy bear sitting on a park bench, surrounded by vibrant autumn leaves scattered across the ground. The camera slowly zooms in on the teddy bear, capturing the soft texture of its fur as a gentle breeze causes a few leaves to flutter around it. The bear remains still, its button eyes reflecting the soft light of the autumn afternoon. Occasionally, a leaf lands on the bear&#x27;s lap, adding a subtle motion to the otherwise calm scene. The sound of leaves rustling and the distant chirping of birds creates a peaceful atmosphere, with the teddy bear remaining the focal point of the tranquil park setting.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_13/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_13/reference_0.jpg"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up of a beer can placed at the center of a circle made of international currencies—paper bills and coins from various countries. The camera slowly zooms out, capturing the can’s metallic surface and the intricate details of the surrounding money. As the camera moves, the currencies subtly shimmer, reflecting light, while the beer can remains the focal point. The sound of light ambient noise adds to the quiet significance of this global scene, emphasizing the connection between the beer can and its worldwide influence.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_23/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_23/reference_0.jpg"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The video opens with a plush armchair positioned near a roaring fireplace, the warm glow from the flames casting soft light across the room. The camera slowly zooms in on the armchair, capturing its inviting cushions and rich fabric. As the fire crackles, a slight movement is seen in the armchair, as if someone just left it, leaving behind a faint impression in the cushions. The camera shifts to the flickering flames, then back to the chair, highlighting the contrast between the stillness of the armchair and the lively motion of the fire. The gentle crackling sound of the fire and the soft flicker of light create a warm, cozy atmosphere.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_25/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_25/reference_0.jpg"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up of a basketball shoe resting on a reflective surface, its vibrant, multicolored laces standing out against the sleek design. The camera slowly zooms in to capture the intricate details of the shoe—its texture, stitching, and the dynamic play of colors in the laces. As the camera pulls back, the reflections on the surface create an interesting visual effect, enhancing the shoe’s bold features. The video maintains focus on the shoe, emphasizing its design and energy, while subtle background sounds highlight the movement of the camera.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singlehuman_2/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singlehuman_2/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">A man gently clutching a bouquet of vibrant flowers, his eyes radiating a serene contentment as he glances at the camera. His slightly upturned lips convey a sense of calm joy, accompanied by a faint twinkle in his eye. The scene is set in a lush garden, brimming with colorful blooms and verdant foliage, creating a tranquil haven. The shot captures him from the waist up, emphasizing his relaxed stance and the natural harmony of his surroundings.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_1/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_1/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_1/reference_1.jpg"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_1/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">a man feeding a bird in the park.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_8/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_8/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_8/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_8/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">a man sitting in the office, a cat sitting beside him.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_14/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_14/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_14/reference_1.jpg"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/humanobj_14/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">a man sitting on the grass in the park, a dog walking around him.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_1/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_1/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_1/reference_1.jpg"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_1/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">The video depicts an indoor scene where two individuals are engaged in a conversation. The setting appears to be a well-lit room with natural light streaming through large windows. The room is furnished with a wheelchair positioned near the back, suggesting it might be a medical or care facility. A desk with a laptop and some other items is visible on the right side of the frame.
+
+The person on the left, dressed in a gray uniform, is holding a tablet and gesturing with her hands while speaking. Her posture indicates she is explaining something, possibly related to the tablet&#x27;s content. The individual on the right, wearing a light-colored robe, is seated and listening attentively, smiling slightly, which suggests a positive interaction.
+
+The camera remains static throughout the sequence, focusing on capturing the interaction between the two individuals. There is no noticeable camera movement such as panning or zooming. The overall atmosphere seems calm and professional, with the focus on the exchange between the two people.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_5/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_5/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_5/reference_1.jpg"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">The video captures two individuals taking a selfie together in an indoor setting. The man is holding a smartphone with his right hand extended forward, capturing the photo. He is dressed in a light gray blazer over a white shirt. The woman beside him has long blonde hair and is wearing a white top. Both are smiling broadly, appearing cheerful and engaged in the moment.
+
+The background suggests they are in a modern office or a similar professional environment, with a mix of neutral tones and greenery visible behind them. The lighting is bright and even, likely from overhead fluorescent lights, which illuminates the scene clearly without harsh shadows.
+
+As the video progresses, there is minimal change in the positioning of the subjects. They maintain their close proximity and continue to smile at the camera. The man&#x27;s arm remains steady, holding the phone at arm&#x27;s length, while the woman slightly adjusts her position to ensure she is within the frame. The overall atmosphere conveys a sense of camaraderie and lightheartedness.
+
+The camera remains static throughout the sequence, focusing on the two individuals as they pose for the selfie. There is no noticeable panning, tilting, or zooming, keeping the framing consistent and centered on the subjects. The video captures a candid and joyful moment shared between the two individuals.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_11/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_11/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_11/reference_1.jpg"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiface_11/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">The video depicts two individuals sitting closely on a beige couch covered with a matching beige slipcover. The man is seated on the left side, wearing a maroon t-shirt and blue jeans, while the woman sits beside him, dressed in a purple plaid shirt and dark blue jeans. She has her arm around his shoulder, suggesting a friendly or intimate relationship.
+
+The man is focused on a silver laptop placed on his lap, occasionally moving his hands to interact with it. The woman leans in towards the laptop, pointing at the screen with her right hand, indicating she might be explaining something or showing him something specific. Her facial expression suggests engagement and interest.
+
+The background shows large windows with a view of a cityscape, indicating an urban setting. The lighting is bright, suggesting daytime with clear weather outside. The overall atmosphere appears casual and relaxed, with the two individuals comfortably interacting with each other and the laptop.
+
+There is no significant camera movement; the shot remains static throughout the sequence, focusing on capturing the interaction between the two individuals and their shared activity on the laptop.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_3/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_3/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_3/reference_1.jpg"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up of a French press coffee maker on a wooden surface, containing partially brewed coffee, and a blue and white striped mug with a heart design to its left. The background is blurred, suggesting a cozy indoor setting. A person&#x27;s hand, wearing a blue sleeve, appears and presses down on the plunger of the French press, indicating the completion of the brewing process. The person then lifts the French press and pours the freshly brewed coffee into the mug, with the camera focusing on the pouring action. The coffee flows smoothly into the mug, filling it up. After pouring, the person places the French press back on the wooden surface next to the mug, which is now filled with coffee. The video concludes with a close-up of the filled mug and the French press, emphasizing the freshly brewed coffee and the cozy indoor setting.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_6/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_6/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_6/reference_1.jpg"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up view of a wooden birdhouse with a black roof, set against a backdrop of green foliage and a wooden fence. A blue tit, a small bird with blue and yellow plumage, is seen peeking out from the entrance of the birdhouse. Initially, the bird&#x27;s head is visible, and it appears to be looking around. As the video progresses, the bird gradually extends its body out of the entrance, revealing more of its blue and yellow feathers. The bird&#x27;s movements are cautious and deliberate, suggesting it is assessing its surroundings. Throughout the video, the bird&#x27;s position changes slightly, with its head and body moving in and out of the birdhouse. The background remains consistent, with the green foliage and wooden fence providing a natural setting for the birdhouse. The video captures the bird&#x27;s interactions with its environment, highlighting its cautious behavior and the gradual exploration of its surroundings.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_8/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_8/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_8/reference_1.jpg"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_8/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">The video begins with a person standing behind a table, dressed in a red robe with white cuffs, indicating a traditional or cultural setting. On the table, there is a brown clay teapot with a lid, a transparent glass pitcher filled with a golden liquid, and a small white cup with a blue pattern. The person&#x27;s hands are initially resting on the table, near the teapot and the pitcher. The person then lifts the glass pitcher and pours the golden liquid into the white cup, suggesting the preparation of a beverage, likely tea. After pouring, the person places the pitcher back on the table and picks up the cup, bringing it to their mouth to drink. The background features a bamboo mat, reinforcing the traditional or cultural ambiance of the scene. The video captures a sequence of actions related to the preparation and consumption of a beverage, set against a backdrop that suggests a cultural or traditional context.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_18/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_18/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_18/reference_1.jpg"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">The video showcases the process of frying French fries in a commercial kitchen setting. It begins with a close-up of a metal fryer basket filled with golden, crispy French fries being lifted out of a fryer by a person wearing white gloves. The basket is held above a stainless steel fryer, which contains more fries submerged in hot oil. The person tilts the basket to drain excess oil from the fries, allowing it to drip back into the fryer. This action is repeated several times to ensure all the oil is drained. The background is dimly lit, focusing the viewer&#x27;s attention on the frying process. The video emphasizes the meticulous care taken in preparing the fries, highlighting the importance of draining excess oil for the perfect texture and taste.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_19/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_19/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_19/reference_1.jpg"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">The video features a thingoid robot with a shiny metallic finish, standing against a plain white background. The robot is holding a cupcake with chocolate frosting and a yellow cherry on top in its right hand. Throughout the video, the robot maintains a static pose, with no movement or change in its position. The cupcake remains in the robot&#x27;s hand, and there are no alterations in the robot&#x27;s posture or the environment. The background remains consistently white, and there are no additional elements introduced into the scene. The camera angle and perspective do not change, providing a continuous, unaltered view of the robot and the cupcake.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_23/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_23/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_23/reference_1.jpg"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_23/reference_2.jpg"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">The video showcases a serene and static scene set on a wooden table. On the left side of the table, there is a plate filled with golden-brown, crescent-shaped cookies. To the right, a clear glass vase holds a bouquet of lilac flowers, adding a touch of natural beauty to the setting. In the foreground, a transparent glass teapot is seen pouring a golden liquid, presumably tea, into a matching glass cup. The pouring action is captured in detail, with the tea flowing smoothly from the teapot into the cup. Throughout the video, there are no significant changes or movements observed. The scene remains consistent, with the cookies, lilac flowers, and the act of pouring tea maintaining their positions and appearances. The camera angle and perspective do not change, providing a steady view of this tranquil moment.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_28/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">OpenS2V-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_28/reference_0.jpg"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/multiobject_28/reference_1.jpg"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">The video begins with a close-up of a black analog alarm clock with a white face and black numbers, placed on a light-colored wooden floor. The clock shows the time as 10:10. The background features a blurred interior setting with a wooden structure on the left and a striped object on the right, possibly a piece of furniture or a curtain. The scene remains static, with no movement or changes in the environment. As the video progresses, the time on the clock changes to 10:11, indicating a minute has passed. The background and the position of the clock remain unchanged, maintaining the same static scene.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_004/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_004/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_004/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_004/reference_2.png"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">A mouth-watering slow-pan across a rustic wooden diner table. Image-1 sits center stage, steaming slightly. Next to it, Image-2 is piled high, and in the background, Image-3 catches the neon lights of the diner window. The camera slowly pushes in, emphasizing the textures and juicy details of the meal.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_005/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_005/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_005/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_005/reference_2.png"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">A warm, inviting living room scene at twilight. Image-1 sits elegantly on top of Image-3. Beside the chair, Image-2 casts a warm, soft yellow glow over the velvet fabric. The camera slowly arcs around the setup, highlighting the rich textures and cozy atmosphere of the home.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_008/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_008/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_008/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_008/reference_2.png"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">A moody, dimly lit jazz club stage. A musician is passionately playing Image-1, plugged directly into Image-2 which vibrates slightly with the bass. In the foreground, Image-3 stands ready, catching the dramatic blue and purple stage lights. Slow panning shot capturing the live music energy.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_010/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_010/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_010/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_010/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_010/reference_3.png"><span class="lab">ref 4</span></span></div>
+<p class="cap" title="click to expand">A slick, high-end commercial video. Image-1 is walking purposefully through a modern glass-walled office lobby. He is wearing Image-2 impeccably. As he checks the time, the camera does a macro zoom on Image-3 on his wrist, before cutting to a low-angle tracking shot of Image-4 clicking rhythmically on the marble floor.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_012/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_012/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_012/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_012/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_012/reference_3.png"><span class="lab">ref 4</span></span></div>
+<p class="cap" title="click to expand">A luxurious sunlit living room. Image-1, wearing the sparkling Image-4 around its neck, steps gracefully out of Image-2. The cat stretches lazily, then walks over to Image-3 to eat. The camera follows at floor level with a shallow depth of field, highlighting the cat&#x27;s majestic fur.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_013/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_013/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_013/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_013/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_013/reference_3.png"><span class="lab">ref 4</span></span></div>
+<p class="cap" title="click to expand">An architectural interior design video. The camera slowly pans across a chic dining space, showing Image-1 surrounded by four of Image-2. In the center of the table sits Image-3, adding verticality to the space. On the wall behind the setup, Image-4 hangs perfectly centered, completing the modern aesthetic.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_016/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_016/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_016/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_016/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_016/reference_3.png"><span class="lab">ref 4</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_016/reference_4.png"><span class="lab">ref 5</span></span></div>
+<p class="cap" title="click to expand">A wide, sweeping drone shot dropping down into a sun-drenched park. Image-4 is spread out on the green grass. Image-1 and Image-2 are sitting on it, laughing together as they unpack fresh fruit from Image-3. Beside them, Image-5 wags its tail excitedly, hoping for a treat. The scene is bright, happy, and cinematic.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_017/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">Multi-Subject Showcase</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_017/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_017/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_017/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_017/reference_3.png"><span class="lab">ref 4</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/multi_subject/case_017/reference_4.png"><span class="lab">ref 5</span></span></div>
+<p class="cap" title="click to expand">A mouth-watering macro video sequence in a bright kitchen. Image-1 sits in the center of the frame. A hand slowly pours Image-2 over the stack in slow motion, the syrup cascading beautifully. Image-3 is scattered artistically around the plate. To the side sits Image-4, steam rising into the morning light. Finally, a hand picks up Image-5 and cuts into the fluffy stack.</p></div></div>
+</div></section><div class="divider"></div>
+<section class="blk" id="openve"><div class="wrap">
+<div class="head rv"><div class="kick">03 · 34 cases</div>
+<h2>Instruction-Based Video <em>Editing</em></h2><p>Pure text instructions — style transfer, background swap, local add / remove / change. Drag the slider to compare input and TIDE&#x27;s output.</p></div>
+<div class="grid"><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_002/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_002/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the Cyberpunk animation style to this video, ensuring seamless temporal consistency across all frames. The result should emulate the dynamic, futuristic ambiance of Cyberpunk media, complete with flickering neon signs, rain-slicked streets reflecting holographic light, and a gritty urban backdrop. Maintain original motion, character actions, camera movements, and narrative flow, ensuring that every frame transitions smoothly while embodying the Cyberpunk aesthetic.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_006/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_006/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the Studio Ghibli animation style to this video, ensuring seamless temporal consistency across all frames. The result should emulate a Ghibli feature film, complete with its distinctive artistic flair. All original motion, character actions, and camera movements must be meticulously retained to maintain narrative flow.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_008/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_008/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the Watercolor animation style to this video, ensuring seamless temporal consistency across all frames. The output should mirror the aesthetic of traditional Watercolor art, with fluid color transitions, soft outlines, and a dreamlike atmosphere. Maintain the original motion, character actions, camera movements, and narrative flow, ensuring no frame exhibits jarring style inconsistencies.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_011/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_011/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the pixel art style to this video, ensuring seamless frame-by-frame consistency to avoid flickering or jarring transitions. The final output should emulate the look of classic pixel animations, with sharp, retro-style pixels and a cohesive color palette. All original motion—including character movements, camera panning, and dynamic actions—must be preserved in full, without any temporal disruption.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_025/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_025/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the dawn aesthetic to this video, ensuring seamless temporal consistency. The final output should exude the soft, warm ambiance of early morning, with gradual light transitions and pastel sky tones, all while maintaining the original motion, character actions, and camera movements without distortion.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_033/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_033/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the Cartoon Style to this video, ensuring seamless temporal consistency across all frames. The final output should mimic the aesthetic of classic animated cartoons, complete with dynamic character animations, exaggerated movements, and a vivid color scheme. Maintain the original motion, camera angles, and narrative flow, ensuring no frame disrupts the cohesive storytelling of the video.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_052/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/global_style_052/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Apply the Chinese Ink Wash Painting style to this video, ensuring seamless temporal consistency across all frames. The final output should emulate classic ink wash art, with animated ink smudging, blended textures, and a soft, ethereal glow. Preserve all original motion, character actions, camera movements, and narrative flow—only the visual style should transform into the traditional ink wash aesthetic.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_070/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_070/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the man&#x27;s casual green t-shirt with a sharp dark navy blue business suit, white shirt, and burgundy tie, maintaining the same position and pose within the scene.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_075/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_075/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the smooth white table with a luxurious marble surface table, ensuring it maintains the same position and pose within the video scene.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_083/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_083/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the sofa with a classic brown leather sofa with visible stitching, ensuring it maintains the sofa&#x27;s exact position and pose within the scene.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_094/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_094/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the young girl&#x27;s winter sweater and skirt with a light, sleeveless pastel summer dress, maintaining her seated position and pose within the scene.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_096/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_096/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the woman in the denim jacket with an elderly woman with silver hair and gentle wrinkles, ensuring she maintains the same position and pose within the scene.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_097/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_change_097/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the man&#x27;s orange astronaut suit with a casual summer outfit of a light blue short-sleeve shirt and beige shorts, keeping the same seated pose and position in the video.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_136/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_136/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the background with a dynamic classic car showroom scene where soft reflections move subtly on the polished car surfaces, overhead lights gently flicker, and distant footsteps and murmurs create a lively but unobtrusive atmosphere, while the subject and car interior remain perfectly still.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_143/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_143/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the background with a dynamic modern conference room where sunlight streams through glass walls casting moving shadows, distant city traffic noise is implied, and subtle reflections shimmer on the glass surfaces, while the subject remains perfectly still.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_148/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_148/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the background with a dynamic ship&#x27;s command bridge scene. Include subtle movements of ocean waves visible through the windows, blinking navigation lights, and soft ambient sounds of the sea and ship machinery. The subject should remain perfectly still.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_149/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_149/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Replace the background with a dynamic cozy lounge scene where the fireplace flickers with dancing flames, shadows gently move on the walls, and a soft glow illuminates the room. The subject remains perfectly still.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_176/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/background_change_176/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Transform the background into a modern art gallery with soft ambient lighting. Include subtle reflections on polished floors, gentle movement of visitors in the distance, and dynamic light shifts from overhead spotlights highlighting the artworks.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_202/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_202/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">&quot;Completely remove the vibrant, neon green text DON&#x27;T PANIC!&quot;&quot; displayed on the tablet from the entire video, using temporally consistent background inpainting and ensuring all other video content remains unchanged.&quot;&quot;&quot;</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_203/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_203/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the delicate white flower with four broad, slightly ruffled petals, smooth and gently curved, symmetrical and balanced, stationary with a pale yellow central core from the entire video sequence. The background must be reconstructed with temporal consistency, and all other video content must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_212/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_212/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the small bird with glossy black plumage, yellow beak, and fluid movements from the entire video. The background must be reconstructed with temporal consistency, and all other video content must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_223/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_remove_223/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the elegant orchid with slender stem, delicate pink blossoms (clustered, ruffled petals), vibrant green leaves, and upright position from the entire video sequence. The background must be reconstructed with temporal consistency, and all other video content must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_add_266/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/local_add_266/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Overlay an animated black metal music stand to the right side of the seated man holding the guitar. The stand should remain fixed relative to the man as the camera moves, with subtle reflections and shadows adapting to the lighting changes. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_309/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_309/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Given the video of the freshly baked seeded bread loaf on the cutting board with a hand holding a knife, transform the entire bread surface into a miniature lush forest with green trees, moss, and tiny flowers shaped exactly like the loaf. The knife is now poised to slice through the forest canopy instead of bread.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_310/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_310/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Given the video of a wide expanse of fluffy white clouds under a clear blue sky, transform the entire cloud layer instantly into a sprawling futuristic cityscape composed of gleaming glass and steel towers with visible streets and lights.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_314/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_314/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Given the video of a man&#x27;s natural hands typing on a black laptop keyboard, transform the hands instantly into sleek, metallic robotic hands with articulated joints and glowing blue lights, maintaining the same typing position and motion.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_322/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_322/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Given the video of the real person wearing a VR headset against a beige background, transform the entire figure into a stylized 3D digital avatar with a translucent visor replacing the VR headset. Change the background to a digital grid environment with floating data streams and neon accents.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_323/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_323/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Given the video of the underground corridor with white corrugated walls and framed pictures, transform the walls into towering bookshelves filled with colorful books extending infinitely. Replace the framed pictures with ornate reading lamps emitting warm light, and change the floor reflections to mirror the golden glow of the lamps.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_327/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/creative_edit_327/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Given the video of the paddleboarder on a calm sea at sunset with warm orange and pink sky reflections, transform the paddleboarder into a glowing ethereal water guardian figure. Change the water to sparkle with bioluminescent waves and add glowing mythical water creatures swimming nearby. Replace the sun with a large luminous moon casting a mystical glow over the shoreline.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_381/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_381/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the subtitles at the top of the video.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_385/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_385/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the subtitles at the bottom of the video.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_391/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_391/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the subtitles at the bottom of the video.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_399/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_399/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the subtitles at the center of the video.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_417/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/openve/subtitle_edit_417/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">OpenVE-Bench</div>
+<p class="cap" title="click to expand">Remove the subtitles at the center of the video.</p></div></div>
+</div></section><div class="divider"></div>
+<section class="blk" id="refvie"><div class="wrap">
+<div class="head rv"><div class="kick">04 · 32 cases</div>
+<h2>Reference-Guided Video <em>Editing</em></h2><p>Text and reference images jointly guide precise subject, background, and appearance edits while preserving the source video&#x27;s structure and motion.</p></div>
+<div class="grid"><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_010/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_010/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_010/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the background with a whimsical fairytale landscape, featuring colorful mushroom houses and a floating castle in a magical forest, ensuring it appears in the same position and pose within the video scene.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/addition_041/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/addition_041/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/addition_041/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Add an oversized, cozy bean bag chair made of grey chunky knit wool beside the table. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_042/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_042/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_042/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the sofa with a mid-century modern lounge chair with an ottoman. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_043/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_043/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_043/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the sofa with an oversized, cozy bean bag chair made of grey chunky knit wool. All other parts of the video must remain unchanged.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_048/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_048/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_048/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the woman&#x27;s hair with a chic, short bob haircut. All other parts of the video must remain unchanged.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_051/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_051/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_051/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the woman&#x27;s hair with a chic, short bob haircut. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_054/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_054/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_054/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the woman&#x27;s hair with a chic, short bob haircut. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_062/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_062/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_062/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the man with a vintage tin toy robot from the 1950s. Boxy chest and head, accordion-style flexible arms. Red and metallic silver paint with scratches and rust. A wind-up key on the back. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_069/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_069/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">RefVIE-Bench</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/refvie/replacement_069/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the girl&#x27;s cloth with a cozy cream-colored cable knit sweater. All other parts of the video must remain unchanged.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_000/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_000/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_000/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the man with the man having a neatly trimmed beard in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_001/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_001/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_001/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the woman with the elderly woman in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_004/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_004/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_004/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the woman’s attire with the deep blue evening gown in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_006/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_006/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_006/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the blue shirt with the suit in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_010/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_010/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_010/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the man with the elderly gentleman in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_018/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_018/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_018/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the shirt with the clothes in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_022/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_022/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_022/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the man with the elderly gentleman in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_023/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_023/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_023/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the yellow modern car with hood open with the car in the image.</p></div><div class="card portrait rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_027/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_027/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_027/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace grey fabric sofa with the white sofa in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_030/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_030/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_030/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the pink flower with the white flower in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_033/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_033/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_033/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">Replace the girl&#x27;s hairstyle with the one shown in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_037/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_037/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_037/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the man with the man in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_041/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_041/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_041/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the woman with the elderly lady in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_043/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_043/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_043/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the white fence with the flower-decorated fence in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_061/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_061/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_change_061/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the sofa with the brown sofa in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/back_change_075/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/back_change_075/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/back_change_075/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the desert scene with the background shown in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/back_change_096/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/back_change_096/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/back_change_096/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">replace the background with the scene shown in the image.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_153/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_153/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_153/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">add the person in the image sitting in the driver&#x27;s seat of the yellow car, resting their left arm on the window and looking slightly to the right.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_159/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_159/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_159/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">add the woman in the image to stand to the left of the man and look at the man.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_161/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_161/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_161/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">add the young girl in the image to stand to the right of the boy and to the left of the cow.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_194/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_194/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_194/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">add the snowman in the image to stand on the snow field near the footprints.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_199/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_199/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_199/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">add the floor lamp in the image behind the man on the right.</p></div><div class="card rv"><div class="frame cmp">
+<video class="res" muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_204/result.mp4"></video>
+<div class="srcwrap"><video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_204/source.mp4"></video></div>
+<div class="cut"></div><div class="knob">⇔</div>
+<span class="tagL">input</span><span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · TIV2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/tiv2v/local_add_204/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">add the dark green backpack in the image onto the person&#x27;s back.</p></div></div>
+</div></section><div class="divider"></div>
+<section class="blk" id="mi2v"><div class="wrap">
+<div class="head rv"><div class="kick">05 · 14 cases</div>
+<h2>Multi-Image-to-Video <em>Generation</em></h2><p>Multiple image conditions composed into one coherent, prompt-following video.</p></div>
+<div class="grid"><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_010/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_010/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The soldiers are retreating under enemy fire, trying to escape the ambush.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_029/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_029/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The man is fleeing from an angry mob that is attempting to grab him, prompting him to defend himself as he runs.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_031/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_031/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The woman is defending herself against the man&#x27;s aggressive assault and gaining the upper hand in the confrontation.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_035/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_035/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The person is defending himself against aggressive supernatural creatures in a desperate survival scenario.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_040/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_040/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The couple is celebrating their love by sharing a romantic moment in a scenic outdoor setting.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_045/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_045/reference_0.png"><span class="lab">ref 1</span></span></div>
+<p class="cap" title="click to expand">The women are playfully engaging in a spontaneous game of chase</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_264/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_264/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_264/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Man on motorcycle approaches camera steadily on sunny, curving rural road.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_285/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_285/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_285/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Camera pans left, revealing seawall, cars, and distant hills under cloudy sky.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_314/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_314/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_314/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Camera zooms out to reveal horse, fence, and water barrel in sunny yard.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_413/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_413/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_413/reference_1.png"><span class="lab">ref 2</span></span></div>
+<p class="cap" title="click to expand">Man stands firm as fire trails swirl dramatically around him at night.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_679/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_679/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_679/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_679/reference_2.png"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">The girl with long silver hair in the first image remains kneeling, her expression shifting as she talks over the background shown in the third image. The boy with brown hair in the second image touches the dirt pile, interacting with the soil.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_708/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_708/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_708/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_708/reference_2.png"><span class="lab">ref 3</span></span></div>
+<p class="cap" title="click to expand">The bear in the first image holds the jar of raspberry jam in the third image steady while using the spoon in the second image to stir. It lifts the spoon, drips jam onto itself, opens its mouth to taste.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_771/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_771/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_771/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_771/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_771/reference_3.png"><span class="lab">ref 4</span></span></div>
+<p class="cap" title="click to expand">The man in the first image talks animatedly to the camera against the background in the fourth image. The man in the second image keeps his thumbs-up pose and smiles. The woman in the third image stands between them.</p></div><div class="card rv"><div class="frame">
+<video muted loop playsinline data-src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_773/result.mp4"></video>
+<span class="tagR">TIDE</span>
+</div><div class="bench">IntelligentVBench · MI2V</div><div class="refrow"><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_773/reference_0.png"><span class="lab">ref 1</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_773/reference_1.png"><span class="lab">ref 2</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_773/reference_2.png"><span class="lab">ref 3</span></span><span class="r"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/mi2v/case_773/reference_3.png"><span class="lab">ref 4</span></span></div>
+<p class="cap" title="click to expand">The woman with green curly hair in the first image holds the perfume bottle in the second image in one hand and the small jar with a silver lid in the third image in the other, over the background shown in the fourth image. She blinks, purses her lips, and looks around.</p></div></div>
+</div></section><div class="divider"></div>
+<section class="blk" id="bibtex"><div class="wrap">
+<div class="head rv"><div class="kick">Citation</div><h2>Read &amp; <em>cite.</em></h2></div>
+<div class="bib rv"><button onclick="copyBib(this)">copy</button><pre>@article{liu2026tide,
+  title={TIDE: Task-Isolated Diffusion for Unified Video Editing and Generation},
+  author={Liu, Qi and Yue, Gang and Yin, Mingyu and Zhang, Lisai and Wu, Yidi
+          and Wang, Yaole and Wang, Yaohui and Yao, Chang and Chen, Jingyuan and Ma, Lin},
+  journal={arXiv preprint arXiv:2606.08260},
+  year={2026}
+}</pre></div>
+</div></section>
+
+<footer>TIDE · project page</footer>
+<script>window.HERO_SRCS=["https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_003/result.mp4", "https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_009/result.mp4", "https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_018/result.mp4", "https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_034/result.mp4", "https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/showcase/case_042/result.mp4", "https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_2/result.mp4", "https://cdn.jsdelivr.net/gh/LittleWork123/LittleWork123.github.io@6a0b397537650733c714ad6e952c0300ef31e695/tide/media/opens2v/singleobj_5/result.mp4"];</script>
+<script>
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+/* hero 轮播：双层 video 交叉淡入 */
+const HERO_SRCS=window.HERO_SRCS||[];
+(function(){
+  const a=$('#bgA'),b=$('#bgB'),dots=$('#dots');
+  if(!HERO_SRCS.length)return;
+  HERO_SRCS.forEach((_,i)=>{const d=document.createElement('i');if(!i)d.className='on';
+    d.onclick=()=>go(i);dots.appendChild(d)});
+  let cur=0,front=a,back=b,timer;
+  front.src=HERO_SRCS[0];front.classList.add('show');front.play().catch(()=>{});
+  function go(i){
+    if(i===cur)return;cur=i;
+    back.src=HERO_SRCS[i];back.play().catch(()=>{});
+    back.classList.add('show');front.classList.remove('show');
+    [front,back]=[back,front];
+    $$('#dots i').forEach((d,j)=>d.classList.toggle('on',j===cur));
+    clearTimeout(timer);timer=setTimeout(next,9000);
+  }
+  function next(){go((cur+1)%HERO_SRCS.length)}
+  timer=setTimeout(next,9000);
+})();
+/* reveal */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.06});
+$$('.rv').forEach(el=>io.observe(el));
+/* lazy videos */
+const vio=new IntersectionObserver(es=>es.forEach(e=>{
+  const f=e.target;
+  if(e.isIntersecting){$$('video',f).forEach(v=>{if(!v.src&&v.dataset.src)v.src=v.dataset.src;v.play().catch(()=>{})});}
+  else $$('video',f).forEach(v=>v.pause());
+}),{rootMargin:'260px'});
+$$('.frame').forEach(f=>vio.observe(f));
+/* compare slider */
+$$('.frame.cmp').forEach(f=>{
+  const wrap=$('.srcwrap',f),cut=$('.cut',f),knob=$('.knob',f),sv=$('video',wrap);
+  const setW=()=>{if(sv)sv.style.width=f.clientWidth+'px'};
+  new ResizeObserver(setW).observe(f);setW();
+  const move=x=>{const r=f.getBoundingClientRect();
+    let p=Math.max(4,Math.min(96,(x-r.left)/r.width*100));
+    wrap.style.width=p+'%';cut.style.left=p+'%';knob.style.left=p+'%';};
+  f.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')move(e.clientX)});
+  f.addEventListener('pointerdown',e=>move(e.clientX));
+  f.addEventListener('mousemove',e=>move(e.clientX));
+});
+/* 同卡片双视频保持同步 */
+$$('.frame.cmp').forEach(f=>{
+  const vs=$$('video',f);if(vs.length<2)return;
+  vs[0].addEventListener('timeupdate',()=>{if(Math.abs(vs[0].currentTime-vs[1].currentTime)>.3)vs[1].currentTime=vs[0].currentTime});
+});
+/* caption 展开 */
+$$('.cap').forEach(c=>c.onclick=()=>c.classList.toggle('open'));
+/* nav 高亮 */
+const secs=$$('section[id]');
+const nio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)
+  $$('#nav a.t').forEach(a=>a.classList.toggle('on',a.hash==='#'+e.target.id))}),
+  {rootMargin:'-38% 0px -55% 0px'});
+secs.forEach(s=>nio.observe(s));
+/* bibtex copy */
+window.copyBib=btn=>{navigator.clipboard.writeText($('.bib pre').textContent)
+  .then(()=>{btn.textContent='copied ✓';setTimeout(()=>btn.textContent='copy',1500)})};
+/* space 暂停/播放可见视频 */
+document.addEventListener('keydown',e=>{
+  if(e.code!=='Space'||/INPUT|TEXTAREA/.test(e.target.tagName))return;e.preventDefault();
+  const vs=$$('video').filter(v=>{const r=v.getBoundingClientRect();return r.bottom>0&&r.top<innerHeight});
+  const playing=vs.some(v=>!v.paused);vs.forEach(v=>playing?v.pause():v.play().catch(()=>{}));
+});
+</script></body></html>
